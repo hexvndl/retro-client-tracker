@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Retro Client Tracker</title>
+
+<style>
+/* ================================
+   80s RETRO NEON STYLE
+================================ */
+
+body {
+  margin: 0;
+  font-family: "Courier New", monospace;
+  background: black;
+  color: #00ffff;
+}
+
+header {
+  text-align: center;
+  padding: 15px;
+  font-size: 22px;
+  color: #ff00ff;
+  text-shadow: 0 0 8px #ff00ff;
+  border-bottom: 2px solid #00ffff;
+}
+
+.container {
+  padding: 10px;
+  max-width: 1400px;
+  margin: auto;
+}
+
+button {
+  background: black;
+  color: #00ffff;
+  border: 2px solid #00ffff;
+  padding: 6px 10px;
+  margin: 4px;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+button:hover {
+  background: #00ffff;
+  color: black;
+}
+
+input {
+  background: black;
+  color: #00ffff;
+  border: 1px solid #00ffff;
+  padding: 5px;
+}
+
+.table-wrapper {
+  overflow-x: auto;
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  min-width: 900px;
+}
+
+th, td {
+  border: 1px solid #00ffff;
+  padding: 4px;
+  text-align: center;
+}
+
+th {
+  color: #ff00ff;
+}
+
+footer {
+  text-align: center;
+  padding: 10px;
+  font-size: 12px;
+  color: #ff00ff;
+  text-shadow: 0 0 5px #ff00ff;
+}
+</style>
+</head>
+<body>
+
+<header>RETRO CLIENT TRACKER v1.0</header>
+
+<div class="container">
+
+<button id="addClient">+ Add Client</button>
+<select id="yearSelect"></select>
+<button id="exportData">Export Backup</button>
+<button id="importData">Import Backup</button>
+<input type="file" id="fileInput" style="display:none">
+
+<div class="table-wrapper">
+<table>
+<thead id="tableHead"></thead>
+<tbody id="tableBody"></tbody>
+</table>
+</div>
+
+<footer>Max 50 Clients • 2 Year History • Offline</footer>
+
+</div>
+
+<script>
+"use strict";
+
+/* ================================
+   CONFIGURATION
+================================ */
+
+const STORAGE_KEY = "retro_client_tracker_v1";
+const MAX_CLIENTS = 50;
+
+const CURRENT_YEAR = new Date().getFullYear();
+const PREVIOUS_YEAR = CURRENT_YEAR - 1;
+
+/* ================================
+   STATE MANAGEMENT
+================================ */
+
+let state = {
+  clients: []
+};
+
+function loadState() {
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if (raw) {
+    state = JSON.parse(raw);
+  }
+}
+
+function saveState() {
+  pruneYears();
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+function pruneYears() {
+  state.clients.forEach(client => {
+    Object.keys(client.payments).forEach(year => {
+      if (year != CURRENT_YEAR && year != PREVIOUS_YEAR) {
+        delete client.payments[year];
+      }
+    });
+  });
+}
+
+/* ================================
+   UI INITIALIZATION
+================================ */
+
+const yearSelect = document.getElementById("yearSelect");
+
+function initYearSelector() {
+  [PREVIOUS_YEAR, CURRENT_YEAR].forEach(year => {
+    const opt = document.createElement("option");
+    opt.value = year;
+    opt.textContent = year;
+    yearSelect.appendChild(opt);
+  });
+}
+
+yearSelect.addEventListener("change", renderTable);
+
+/* ================================
+   CLIENT MANAGEMENT
+================================ */
+
+document.getElementById("addClient").addEventListener("click", () => {
+
+  if (state.clients.length >= MAX_CLIENTS) {
+    alert("Maximum 50 clients reached.");
+    return;
+  }
+
+  const name = prompt("Client Name:");
+  const fee = parseFloat(prompt("Monthly Fee:"));
+
+  if (!name || isNaN(fee)) return;
+
+  const client = {
+    id: crypto.randomUUID(),
+    name: name.trim(),
+    fee,
+    payments: {}
+  };
+
+  state.clients.push(client);
+  saveState();
+  renderTable();
+});
+
+/* ================================
+   TABLE RENDER
+================================ */
+
+function renderTable() {
+
+  const year = yearSelect.value;
+  const head = document.getElementById("tableHead");
+  const body = document.getElementById("tableBody");
+
+  head.innerHTML = "";
+  body.innerHTML = "";
+
+  const headerRow = document.createElement("tr");
+
+  const headers = ["Client","Fee",
+    "1","2","3","4","5","6",
+    "7","8","9","10","11","12",
+    "Paid","Outstanding","X"];
+
+  headers.forEach(text => {
+    const th = document.createElement("th");
+    th.textContent = text;
+    headerRow.appendChild(th);
+  });
+
+  head.appendChild(headerRow);
+
+  state.clients.forEach(client => {
+
+    if (!client.payments[year]) {
+      client.payments[year] = {};
+      for (let m = 1; m <= 12; m++) {
+        client.payments[year][m] = false;
+      }
+    }
+
+    const row = document.createElement("tr");
+
+    const nameCell = document.createElement("td");
+    nameCell.textContent = client.name;
+    row.appendChild(nameCell);
+
+    const feeCell = document.createElement("td");
+    feeCell.textContent = client.fee;
+    row.appendChild(feeCell);
+
+    let paidCount = 0;
+
+    for (let m = 1; m <= 12; m++) {
+      const cell = document.createElement("td");
+      const cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.checked = client.payments[year][m];
+
+      cb.addEventListener("change", () => {
+        client.payments[yea]()
